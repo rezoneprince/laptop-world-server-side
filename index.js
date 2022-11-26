@@ -91,6 +91,29 @@ const run = async () => {
       );
       res.send(result);
     });
+
+    app.get("/featured", async (req, res) => {
+      const query = { featured: true };
+      const result = await productsCollection.find(query).toArray();
+      res.send(result);
+    });
+
+    app.put("/featured/:id", async (req, res) => {
+      const id = req.params.id;
+      const filter = { _id: ObjectId(id) };
+      const options = { upsert: true };
+      const updatedDoc = {
+        $set: {
+          featured: true,
+        },
+      };
+      const result = await productsCollection.updateOne(
+        filter,
+        updatedDoc,
+        options
+      );
+      res.send(result);
+    });
   } finally {
   }
 };
