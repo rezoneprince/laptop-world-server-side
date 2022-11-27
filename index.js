@@ -55,7 +55,44 @@ const run = async () => {
       res.status(403).send({ accessToken: "" });
     });
 
+    // verify Admin
+    const verifyAdmin = async (req, res, next) => {
+      const decodedEmail = req.decoded.email;
+      const query = { email: decodedEmail };
+      const user = await usersCollection.findOne(query);
+
+      if (user?.role !== "admin") {
+        return res.status(403).send({ message: "forbidden access" });
+      }
+      next();
+    };
+
+    // verify Seller
+    const verifySeller = async (req, res, next) => {
+      const decodedEmail = req.decoded.email;
+      const query = { email: decodedEmail };
+      const user = await usersCollection.findOne(query);
+
+      if (user?.role === "seller") {
+        next();
+      }
+      return res.status(403).send({ message: "forbidden access" });
+    };
+
     // users
+
+    app.get("/users/buyers", verifyJWT, verifyAdmin, async (req, res) => {
+      const query = { role: "buyer" };
+      const users = await usersCollection.find(query).toArray();
+      res.send(users);
+    });
+
+    app.get("/users/sellers", verifyJWT, verifyAdmin, async (req, res) => {
+      const query = { role: "seller" };
+      const users = await usersCollection.find(query).toArray();
+      res.send(users);
+    });
+
     app.post("/users", async (req, res) => {
       const user = req.body;
       const result = await usersCollection.insertOne(user);
@@ -83,8 +120,6 @@ const run = async () => {
     app.get("/products", verifyJWT, async (req, res) => {
       const email = req.query.email;
 
-      console.log(email, req.decoded.email);
-
       // Access check
       const decodedEmail = req.decoded.email;
       if (email !== decodedEmail) {
@@ -110,14 +145,13 @@ const run = async () => {
       res.send(result);
     });
 
-    app.post("/products", async (req, res) => {
+    app.post("/products", verifyJWT, verifySeller, async (req, res) => {
       const product = req.body;
-      console.log(product);
       const result = await productsCollection.insertOne(product);
       res.send(result);
     });
 
-    app.get("/reported", async (req, res) => {
+    app.get("/reported", verifyJWT, verifyAdmin, async (req, res) => {
       const query = { reported: true };
       const result = await productsCollection.find(query).toArray();
       res.send(result);
@@ -146,7 +180,7 @@ const run = async () => {
       res.send(result);
     });
 
-    app.put("/featured/:id", async (req, res) => {
+    app.put("/featured/:id", verifyJWT, verifySeller, async (req, res) => {
       const id = req.params.id;
       const filter = { _id: ObjectId(id) };
       const options = { upsert: true };
