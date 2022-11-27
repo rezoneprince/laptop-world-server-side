@@ -1,7 +1,7 @@
 const express = require("express");
 const cors = require("cors");
 const { MongoClient, ServerApiVersion, ObjectId } = require("mongodb");
-// const jwt = require("jsonwebtoken");
+const jwt = require("jsonwebtoken");
 require("dotenv").config();
 // const stripe = require("stripe")(process.env.STRIPE_SECRET_KEY);
 
@@ -19,10 +19,48 @@ const client = new MongoClient(uri, {
   serverApi: ServerApiVersion.v1,
 });
 
+const verifyJWT = (req, res, next) => {
+  const authHeader = req.headers.authorization;
+  if (!authHeader) {
+    return res.status(401).send("unauthorize access");
+  }
+  const token = authHeader.split(" ")[1];
+  jwt.verify(token, process.env.ACCESS_TOKEN, function (err, decoded) {
+    if (err) {
+      return res.status(403).send({ massage: "forbidden access" });
+    }
+    req.decoded = decoded;
+    next();
+  });
+};
+
 const run = async () => {
   try {
+    const usersCollection = client.db("laptopWorld").collection("users");
     const categoryCollection = client.db("laptopWorld").collection("category");
     const productsCollection = client.db("laptopWorld").collection("products");
+
+    // jwt
+    app.get("/jwt", async (req, res) => {
+      const email = req.query.email;
+      const query = { email: email };
+      const user = await usersCollection.findOne(query);
+
+      if (user) {
+        const token = jwt.sign({ email }, process.env.ACCESS_TOKEN, {
+          expiresIn: "1h",
+        });
+        return res.send({ accessToken: token });
+      }
+      res.status(403).send({ accessToken: "" });
+    });
+
+    // users
+    app.post("/users", async (req, res) => {
+      const user = req.body;
+      const result = await usersCollection.insertOne(user);
+      res.send(result);
+    });
 
     // categories
 
@@ -34,6 +72,7 @@ const run = async () => {
 
     app.get("/categories/:id", async (req, res) => {
       const id = req.params.id;
+
       const query = { _id: ObjectId(id) };
       const result = await categoryCollection.findOne(query);
       res.send(result);
@@ -41,8 +80,17 @@ const run = async () => {
 
     // products
 
-    app.get("/products", async (req, res) => {
+    app.get("/products", verifyJWT, async (req, res) => {
       const email = req.query.email;
+
+      console.log(email, req.decoded.email);
+
+      // Access check
+      const decodedEmail = req.decoded.email;
+      if (email !== decodedEmail) {
+        return res.status(403).send({ massage: "forbidden access" });
+      }
+
       const query = { email: email };
       const result = await productsCollection.find(query).toArray();
       res.send(result);
