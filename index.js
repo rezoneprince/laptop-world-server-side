@@ -113,6 +113,13 @@ const run = async () => {
       res.send({ isSeller: user?.role === "seller" });
     });
 
+    app.get("/users/buyer/:email", async (req, res) => {
+      const email = req.params.email;
+      const query = { email: email };
+      const user = await usersCollection.findOne(query);
+      res.send({ isBuyer: user?.role === "buyer" });
+    });
+
     // categories
 
     app.get("/categories", async (req, res) => {
