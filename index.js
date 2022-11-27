@@ -39,6 +39,7 @@ const run = async () => {
     const usersCollection = client.db("laptopWorld").collection("users");
     const categoryCollection = client.db("laptopWorld").collection("category");
     const productsCollection = client.db("laptopWorld").collection("products");
+    const ordersCollection = client.db("laptopWorld").collection("orders");
 
     // jwt
     app.get("/jwt", async (req, res) => {
@@ -120,6 +121,25 @@ const run = async () => {
       res.send({ isBuyer: user?.role === "buyer" });
     });
 
+    app.put("/users/verified/:id", verifyJWT, verifyAdmin, async (req, res) => {
+      const id = req.params.id;
+      const filter = { _id: ObjectId(id) };
+      const options = { upsert: true };
+      const updatedDoc = {
+        $set: {
+          verified: true,
+        },
+      };
+      const result = await usersCollection.updateOne(
+        filter,
+        updatedDoc,
+        options
+      );
+      res.send(result);
+    });
+
+    
+
     // categories
 
     app.get("/categories", async (req, res) => {
@@ -140,7 +160,6 @@ const run = async () => {
 
     app.get("/products", verifyJWT, async (req, res) => {
       const email = req.query.email;
-
       // Access check
       const decodedEmail = req.decoded.email;
       if (email !== decodedEmail) {
@@ -149,14 +168,15 @@ const run = async () => {
 
       const query = { email: email };
       const result = await productsCollection.find(query).toArray();
-      res.send(result);
+      res.send(featured);
     });
 
     app.get("/category-products", async (req, res) => {
       const category = req.query.category;
       const query = { category: category };
       const result = await productsCollection.find(query).toArray();
-      res.send(result);
+      const featured = result.filter((featured) => featured.sold !== true);
+      res.send(featured);
     });
 
     app.get("/product/:id", async (req, res) => {
@@ -169,6 +189,23 @@ const run = async () => {
     app.post("/products", verifyJWT, verifySeller, async (req, res) => {
       const product = req.body;
       const result = await productsCollection.insertOne(product);
+      res.send(result);
+    });
+
+    app.put("/products/:id", async (req, res) => {
+      const id = req.params.id;
+      const filter = { _id: ObjectId(id) };
+      const options = { upsert: true };
+      const updatedDoc = {
+        $set: {
+          sold: true,
+        },
+      };
+      const result = await productsCollection.updateOne(
+        filter,
+        updatedDoc,
+        options
+      );
       res.send(result);
     });
 
@@ -198,7 +235,8 @@ const run = async () => {
     app.get("/featured", async (req, res) => {
       const query = { featured: true };
       const result = await productsCollection.find(query).toArray();
-      res.send(result);
+      const featured = result.filter((featured) => featured.sold !== true);
+      res.send(featured);
     });
 
     app.put("/featured/:id", verifyJWT, verifySeller, async (req, res) => {
@@ -215,6 +253,20 @@ const run = async () => {
         updatedDoc,
         options
       );
+      res.send(result);
+    });
+
+    // Order
+    app.get("/orders", async (req, res) => {
+      const email = req.query.email;
+      const query = { customerEmail: email };
+      const result = await ordersCollection.find(query).toArray();
+      res.send(result);
+    });
+
+    app.post("/orders", async (req, res) => {
+      const order = req.body;
+      const result = await ordersCollection.insertOne(order);
       res.send(result);
     });
   } finally {
