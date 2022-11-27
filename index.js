@@ -138,7 +138,14 @@ const run = async () => {
       res.send(result);
     });
 
-    
+    app.delete("/seller/:id", verifyJWT, verifyAdmin, async (req, res) => {
+      const id = req.params.id;
+      const query = { _id: ObjectId(id) };
+      const result = await usersCollection.deleteOne(query);
+      res.send(result);
+    });
+
+   
 
     // categories
 
@@ -168,7 +175,7 @@ const run = async () => {
 
       const query = { email: email };
       const result = await productsCollection.find(query).toArray();
-      res.send(featured);
+      res.send(result);
     });
 
     app.get("/category-products", async (req, res) => {
