@@ -27,7 +27,7 @@ const verifyJWT = (req, res, next) => {
   const token = authHeader.split(" ")[1];
   jwt.verify(token, process.env.ACCESS_TOKEN, function (err, decoded) {
     if (err) {
-      return res.status(403).send({ massage: "forbidden access" });
+      return res.status(403).send({ message: "forbidden access" });
     }
     req.decoded = decoded;
     next();
@@ -175,7 +175,7 @@ const run = async () => {
       // Access check
       const decodedEmail = req.decoded.email;
       if (email !== decodedEmail) {
-        return res.status(403).send({ massage: "forbidden access" });
+        return res.status(403).send({ message: "forbidden access" });
       }
 
       const query = { email: email };
