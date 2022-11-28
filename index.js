@@ -295,6 +295,13 @@ const run = async () => {
       const result = await ordersCollection.insertOne(order);
       res.send(result);
     });
+
+    app.delete("/orders/:id", verifyJWT, async (req, res) => {
+      const id = req.params.id;
+      const query = { _id: ObjectId(id) };
+      const result = await ordersCollection.deleteOne(query);
+      res.send(result);
+    });
   } finally {
   }
 };
